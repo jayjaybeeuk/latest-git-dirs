@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Run tests
+        run: go test ./... -v
+
+      - name: Build Linux
+        run: GOOS=linux GOARCH=amd64 go build -o dist/latestdirs-linux ./cmd/latestdirs
+
+      - name: Build Windows
+        run: GOOS=windows GOARCH=amd64 go build -o dist/latestdirs.exe ./cmd/latestdirs
+
+      - name: Build macOS ARM
+        run: GOOS=darwin GOARCH=arm64 go build -o dist/latestdirs-macos ./cmd/latestdirs
+
+      - name: Generate version
+        id: version
+        run: |
+          VERSION="v0.1.$(git rev-list --count HEAD)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            dist/latestdirs-linux
+            dist/latestdirs.exe
+            dist/latestdirs-macos
