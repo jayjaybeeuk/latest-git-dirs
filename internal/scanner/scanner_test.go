@@ -45,6 +45,7 @@ func TestLatestModified_ExcludesDir(t *testing.T) {
 	os.WriteFile(normal, []byte("old"), 0644)
 	oldTime := time.Now().Add(-1 * time.Hour)
 	os.Chtimes(normal, oldTime, oldTime)
+	os.Chtimes(tmp, oldTime, oldTime)
 
 	excludes := map[string]bool{"node_modules": true}
 	latest, err := LatestModified(tmp, 10, excludes)
@@ -64,13 +65,16 @@ func TestLatestModified_RespectsMaxDepth(t *testing.T) {
 	// Create deeply nested file
 	deep := filepath.Join(tmp, "a", "b", "c", "d")
 	os.MkdirAll(deep, 0755)
-	os.WriteFile(filepath.Join(deep, "deep.txt"), []byte("deep"), 0644)
+	deepFile := filepath.Join(deep, "deep.txt")
+	os.WriteFile(deepFile, []byte("deep"), 0644)
 
 	// Create shallow old file
 	shallow := filepath.Join(tmp, "shallow.txt")
 	os.WriteFile(shallow, []byte("shallow"), 0644)
 	oldTime := time.Now().Add(-1 * time.Hour)
 	os.Chtimes(shallow, oldTime, oldTime)
+	os.Chtimes(tmp, oldTime, oldTime)
+	os.Chtimes(filepath.Join(tmp, "a"), oldTime, oldTime)
 
 	// maxDepth=1 should not reach depth 4
 	latest, err := LatestModified(tmp, 1, map[string]bool{})

@@ -40,12 +40,20 @@ func main() {
 		"obj":          true,
 	}
 
+	workerCount := *workers
+	if workerCount <= 0 {
+		workerCount = runtime.NumCPU()
+		if workerCount <= 0 {
+			workerCount = 1
+		}
+	}
+
 	jobs := make(chan string)
 	results := make(chan model.Result)
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < *workers; i++ {
+	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -53,6 +61,9 @@ func main() {
 			for dir := range jobs {
 				latest, err := scanner.LatestModified(dir, *depth, excludes)
 				if err != nil {
+					continue
+				}
+				if latest.IsZero() {
 					continue
 				}
 
@@ -69,6 +80,9 @@ func main() {
 	go func() {
 		for _, entry := range entries {
 			if !entry.IsDir() {
+				continue
+			}
+			if excludes[entry.Name()] {
 				continue
 			}
 
