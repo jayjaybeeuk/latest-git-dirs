@@ -1,0 +1,48 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Run tests
+        run: go test ./... -v
+
+      - name: Run benchmarks
+        run: go test ./... -bench=. -benchmem -benchtime=1s
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build Linux
+        run: GOOS=linux GOARCH=amd64 go build -o dist/latestdirs-linux ./cmd/latestdirs
+
+      - name: Build Windows
+        run: GOOS=windows GOARCH=amd64 go build -o dist/latestdirs.exe ./cmd/latestdirs
+
+      - name: Build macOS ARM
+        run: GOOS=darwin GOARCH=arm64 go build -o dist/latestdirs-macos ./cmd/latestdirs
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: dist/
